@@ -1,5 +1,5 @@
 import pytest
-from math.armstrong_number.armstrong_number import ArmstrongRangeFinder
+from src.math.armstrong_number.armstrong_number import ArmstrongRangeFinder
 
 
 class TestArmstrong:
