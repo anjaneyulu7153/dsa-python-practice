@@ -1,0 +1,74 @@
+name: PR Title Validation
+
+# Trigger workflow on pull request events
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+# Required permissions to comment on PRs
+permissions:
+  pull-requests: write
+
+jobs:
+  validate-pr-title:
+    name: Validate PR Title Format
+    runs-on: ubuntu-latest
+
+    # Define environment variable for reuse
+    env:
+      PR_TITLE: ${{ github.event.pull_request.title }}
+
+    steps:
+      - name: Validate PR title using regex
+        uses: actions/github-script@v7
+
+        with:
+          script: |
+            /**
+             * Access PR title from environment variable
+             */
+            const title = process.env.PR_TITLE;
+
+            /**
+             * Regex pattern explanation:
+             * - (AJ|PROJECT)       → Allowed ticket prefixes
+             * - \d{4,7}           → Ticket number (4 to 7 digits)
+             * - :                 → Mandatory colon
+             * - \s.+\s.+          → At least 2 words in description
+             *
+             * Example:
+             * AJ-1234: Add login feature
+             */
+            const regex = /^(AJ|PROJECT)-\d{4,7}:\s.+\s.+/;
+
+            console.log(`Checking PR Title: ${title}`);
+
+            // Validate title
+            if (!regex.test(title)) {
+              console.log("Invalid PR title format");
+
+              /**
+               * Add comment on PR if validation fails
+               */
+              await github.rest.issues.createComment({
+                issue_number: context.payload.pull_request.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: [
+                  "❌ **Invalid PR Title Format**",
+                  "",
+                  "Please follow this format:",
+                  "**{ticketID}: 2+ word summary**",
+                  "",
+                  "### ✅ Example",
+                  "AJ-12345: Update pytest version"
+                ].join("\n")
+              });
+
+              /**
+               * Mark workflow as failed
+               */
+              core.setFailed("PR title validation failed");
+            } else {
+              console.log("PR title is valid");
+            }
